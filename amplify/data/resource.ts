@@ -4,7 +4,7 @@ import { type ClientSchema, a, defineData } from "@aws-amplify/backend";
 const schema = a.schema({
   Todo: a.model({
     content: a.string(),
-  }).authorization((allow) => [allow.owner()]),  // only the owner can CRUD
+  }).authorization((allow) => [allow.owner()]), // per-user records
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -12,7 +12,7 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    // All data access goes through Cognito user pool tokens
+    // Data client (generateClient) signs API requests with the userPool token
     defaultAuthorizationMode: "userPool",
   },
 });
