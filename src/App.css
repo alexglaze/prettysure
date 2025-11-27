@@ -1,42 +1,67 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
+import { useEffect, useState } from "react";
+import { useAuthenticator } from "@aws-amplify/ui-react";
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
+import type { Schema } from "../amplify/data/resource";
+import { generateClient } from "aws-amplify/data";
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
+import NavBar from "./components/NavBar";
+import HomePage from "./pages/HomePage";
+import RatePage from "./pages/RatePage";
+import AccountPage from "./pages/AccountPage";
+import UpgradePage from "./pages/UpgradePage";
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
+const client = generateClient<Schema>();
 
-.card {
-  padding: 2em;
-}
+type Page = "home" | "rate" | "upgrade" | "account";
 
-.read-the-docs {
-  color: #888;
+export default function App() {
+  const { user } = useAuthenticator();
+
+  const [currentPage, setCurrentPage] = useState<Page>("home");
+  const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
+
+  // persistent home photo stored here so navigation doesn’t wipe it
+  const [persistentPhotoUrl, setPersistentPhotoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const sub = client.models.Todo.observeQuery().subscribe({
+      next: ({ items }) => setTodos([...items]),
+    });
+    return () => sub.unsubscribe();
+  }, []);
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case "home":
+        return (
+          <HomePage
+            persistentPhotoUrl={persistentPhotoUrl}
+            setPersistentPhotoUrl={setPersistentPhotoUrl}
+          />
+        );
+      case "rate":
+        return <RatePage todos={todos} client={client} />;
+      case "upgrade":
+        return <UpgradePage />;
+      case "account":
+        return <AccountPage />;
+      default:
+        return <HomePage />;
+    }
+  };
+
+  return (
+    <div className="app-shell">
+      <NavBar
+        currentPage={currentPage}
+        onNavigate={setCurrentPage}
+        userLabel={user?.signInDetails?.loginId || ""}
+      />
+
+      {/* padding-top ensures navbar never overlaps home text */}
+      <main className="page-content" style={{ paddingTop: "90px" }}>
+        {renderPage()}
+      </main>
+    </div>
+  );
 }

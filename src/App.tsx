@@ -1,81 +1,60 @@
 import { useEffect, useState } from "react";
 import { useAuthenticator } from "@aws-amplify/ui-react";
+
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 
+import NavBar from "./components/NavBar";
+import HomePage from "./pages/HomePage";
+import RatePage from "./pages/RatePage";
+import AccountPage from "./pages/AccountPage";
+import UpgradePage from "./pages/UpgradePage";
+
 const client = generateClient<Schema>();
 
-function App() {
+type Page = "home" | "rate" | "upgrade" | "account";
+
+export default function App() {
+  const { user } = useAuthenticator();
+  const [currentPage, setCurrentPage] = useState<Page>("home");
   const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
-  const { user, signOut } = useAuthenticator();
 
+  /** --- KEEP YOUR DATA SUBSCRIPTION (Amplify works fine like this) --- */
   useEffect(() => {
-    console.log(
-      "Auth user changed:",
-      user?.userId,
-      user?.username,
-      user?.signInDetails?.loginId
-    );
-
-    if (!user) {
-      // no user = clear local state
-      setTodos([]);
-      return;
-    }
-
     const sub = client.models.Todo.observeQuery().subscribe({
-      next: (data) => {
-        console.log("Todos from backend:", data.items);
-        setTodos([...data.items]);
-      },
-      error: (err) => {
-        console.error("observeQuery error", err);
-      },
+      next: ({ items }) => setTodos([...items]),
     });
+    return () => sub.unsubscribe();
+  }, []);
 
-    // unsubscribe whenever user changes or component unmounts
-    return () => {
-      console.log("Unsubscribing from todos");
-      sub.unsubscribe();
-    };
-  }, [user]); // key change: depend on the whole user object
+  /** --- SIMPLE PAGE RENDERER (NO ROUTER) --- */
+  const renderPage = () => {
+    switch (currentPage) {
+      case "home":
+        return <HomePage />;
+      case "rate":
+        return <RatePage todos={todos} client={client} />;
+      case "upgrade":
+        return <UpgradePage />;
+      case "account":
+        return <AccountPage />;
+      default:
+        return <HomePage />;
+    }
+  };
 
-  function createTodo() {
-    const content = window.prompt("Todo content");
-    if (!content) return; // avoid empty todos
-
-    client.models.Todo.create({ content });
-  }
-
-  function deleteTodo(id: string) {
-    client.models.Todo.delete({ id });
-  }
-
+  /** --- RENDER APP SHELL --- */
   return (
-    <main>
-      <h1>{user?.signInDetails?.loginId}'s todos</h1>
+    <div className="app-shell">
+      <NavBar
+        currentPage={currentPage}
+        onNavigate={setCurrentPage}
+        userLabel={user?.signInDetails?.loginId || ""}
+      />
 
-      <button onClick={createTodo}>+ new</button>
-
-      <ul>
-        {todos.map((todo) => (
-          <li key={todo.id} onClick={() => deleteTodo(todo.id)}>
-            {todo.content}
-          </li>
-        ))}
-      </ul>
-
-      <div>
-        🥳 App successfully hosted. Try creating a new todo.
-        <br />
-        <a href="https://docs.amplify.aws/react/start/quickstart/#make-frontend-updates">
-          Review next step of this tutorial.
-        </a>
-      </div>
-
-      <button onClick={signOut}>Sign out</button>
-    </main>
+      <main className="page-content">
+        {renderPage()}
+      </main>
+    </div>
   );
 }
-
-export default App;
