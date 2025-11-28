@@ -17,7 +17,7 @@ const REPORT_CATEGORIES = [
   "Other",
 ];
 
-const RatePage: React.FC<RatePageProps> = ({ todos, client }) => {
+const RatePage: React.FC<RatePageProps> = ({ todos }) => {
   const [index, setIndex] = useState(0);
   const [rating, setRating] = useState(5);
   const [canSubmit, setCanSubmit] = useState(false);

@@ -4,6 +4,8 @@ import { useAuthenticator } from "@aws-amplify/ui-react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 
+import "./App.css";
+
 import NavBar from "./components/NavBar";
 import HomePage from "./pages/HomePage";
 import RatePage from "./pages/RatePage";
@@ -48,7 +50,8 @@ export default function App() {
     <div className="app-shell">
       <NavBar
         currentPage={currentPage}
-        onNavigate={setCurrentPage}
+        onNavigate={(page) => setCurrentPage(page as Page)}
+
         userLabel={user?.signInDetails?.loginId || ""}
       />
 
